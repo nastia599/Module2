@@ -1,0 +1,77 @@
+from skimage.io import imread,imsave,imshow
+from matplotlib import pyplot as plt
+import numpy as np
+from skimage.filters.rank import median
+%matplotlib inline
+
+# -- Your code here -- #
+
+im = imread('etretat.jpg')
+
+plt.figure()
+plt.imshow(im)
+plt.show()
+
+
+#----noise reduction
+#we reduce noise for each channel of RGB with median filter
+im[:,:,0]= median(im[:,:,0]) #R
+im[:,:,1]= median(im[:,:,1]) #G
+im[:,:,2]= median(im[:,:,2]) #B
+
+#----autolevel
+#make an higher intensity/improve the contrast
+
+def cumul_hist(im): #cumulative histogram
+    cumul_hist = np.zeros((256,)) #create an array with zeros
+    c=0
+    for v in range(256):
+        c+=(im==v).sum() #add all the values of the image and c cumulates
+        cumul_hist[v]=c #on the position v in the histogram, we take value c
+    cumul_hist/=cumul_hist.max() #divide by the max value of the cumulated histogram to normalize it
+    return cumul_hist
+
+h = cumul_hist(im)
+
+for v in range(256):
+    if h[v]>0.02:break #we take the minimal
+Tmin = v-1 
+
+for v in range(256):
+    if h[255-v]<0.98: break
+Tmax = (255-v)+1
+
+lut = np.arange(256)
+
+lut[:Tmin] =0 #all the values before Tmin equals 0 (dark)
+lut[Tmax:]=255 #all the values after Tmax equals 255 (bright)
+lut[Tmin:Tmax]=(255/(Tmax-Tmin))*(lut[Tmin:Tmax]-Tmin) 
+
+im_out = lut[im]
+ 
+
+#----gamma correction &
+gamma = 0.4 #factor to have instead of a linear line, a curve 
+
+im_out[:,:,0]= np.power(im_out[:,:,0]/255,gamma)*255 #R
+im_out[:,:,1]= np.power(im_out[:,:,1]/255,gamma)*255 #G
+im_out[:,:,2]= np.power(im_out[:,:,2]/255,gamma)*255 #B 
+
+
+#----color saturation
+#make the image brighter or darker
+#we can change alpha,beta according to the level saturation we want
+alpha = 2.5 
+beta = 3.2 
+delta = 3.5
+
+im_out[:,:,0]= np.power(im_out[:,:,0]/255,alpha)*255 #R
+im_out[:,:,1]= np.power(im_out[:,:,1]/255,beta)*255 #G
+im_out[:,:,2]= np.power(im_out[:,:,2]/255,delta)*255 #B  
+
+im_out=im_out.astype(np.uint8) #conversion of type of im_out (uint32) to uint8 to save the image
+plt.figure()
+plt.imshow(im_out)
+plt.show()
+
+imsave('enhanced_image.jpg',im_out)  
